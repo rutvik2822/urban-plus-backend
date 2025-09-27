@@ -15,12 +15,12 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// MySQL connection
+// MySQL connection (✅ keep ONLY env variables for deployment)
 const db = mysql.createConnection({
-  host: process.env.DB_HOST || "localhost",
-  user: process.env.DB_USER || "root",
-  password: process.env.DB_PASS || "",
-  database: process.env.DB_NAME || "urban_plus",
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASS,
+  database: process.env.DB_NAME,
 });
 
 db.connect((err) => {
@@ -86,7 +86,7 @@ app.post("/api/auth/login", (req, res) => {
 
     const token = jwt.sign(
       { id: user.id, name: user.name, email: user.email },
-      process.env.JWT_SECRET,
+      process.env.JWT_SECRET, // ✅ use env
       { expiresIn: "1h" }
     );
 
