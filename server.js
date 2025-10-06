@@ -3,6 +3,7 @@ const cors = require("cors");
 const mysql = require("mysql2");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const axios = require("axios"); // ✅ Used for proxy
 require("dotenv").config();
 
 const app = express();
@@ -15,7 +16,7 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// MySQL connection (✅ keep ONLY env variables for deployment)
+// MySQL connection
 const db = mysql.createConnection({
   host: process.env.DB_HOST,
   port: process.env.DB_PORT,
@@ -87,7 +88,7 @@ app.post("/api/auth/login", (req, res) => {
 
     const token = jwt.sign(
       { id: user.id, name: user.name, email: user.email },
-      process.env.JWT_SECRET, // ✅ use env
+      process.env.JWT_SECRET,
       { expiresIn: "1h" }
     );
 
@@ -161,7 +162,20 @@ app.delete("/api/user/delete-city", verifyToken, (req, res) => {
   });
 });
 
-// Start server
+// ---------- ✅ NEWS PROXY ROUTE (City-based fix for CORS issue) ----------
+app.get("/api/news", async (req, res) => {
+  try {
+    const { city = "India" } = req.query;
+    const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(city)}&language=en&pageSize=10&sortBy=publishedAt&apiKey=${process.env.NEWS_API_KEY}`;
+    const response = await axios.get(url);
+    res.json(response.data);
+  } catch (error) {
+    console.error("❌ News API error:", error.message);
+    res.status(500).json({ msg: "Error fetching news" });
+  }
+});
+
+// ---------- Start server ----------
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
