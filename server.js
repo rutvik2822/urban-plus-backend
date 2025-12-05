@@ -3,7 +3,7 @@ const cors = require("cors");
 const mysql = require("mysql2");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-const axios = require("axios"); // ✅ Used for proxy
+const axios = require("axios"); 
 require("dotenv").config();
 
 const app = express();
@@ -16,20 +16,35 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// MySQL connection
+
+// -----------------------------------------
+// ✅ UPDATED MYSQL CONNECTION (Aiven + SSL)
+// -----------------------------------------
+let ssl = null;
+
+// Aiven requires SSL — but Railway also accepts it
+ssl = { rejectUnauthorized: true };
+
+// If CA certificate exists (optional), attach it
+if (process.env.DB_CA_CERT) {
+  ssl.ca = process.env.DB_CA_CERT;
+}
+
+// Create secure connection
 const db = mysql.createConnection({
   host: process.env.DB_HOST,
-  port: process.env.DB_PORT,
+  port: process.env.DB_PORT || 3306,
   user: process.env.DB_USER,
   password: process.env.DB_PASS,
   database: process.env.DB_NAME,
+  ssl: ssl,
 });
 
 db.connect((err) => {
   if (err) {
     console.error("❌ Database connection failed:", err);
   } else {
-    console.log("✅ Connected to MySQL database");
+    console.log("✅ Connected to MySQL database (SSL Enabled)");
   }
 });
 
@@ -102,7 +117,7 @@ app.post("/api/auth/login", (req, res) => {
 
 // ---------- Middleware to protect routes ----------
 function verifyToken(req, res, next) {
-  const token = req.headers["authorization"]?.split(" ")[1]; // Bearer token
+  const token = req.headers["authorization"]?.split(" ")[1];
   if (!token) return res.status(401).json({ msg: "No token provided" });
 
   jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
@@ -162,7 +177,7 @@ app.delete("/api/user/delete-city", verifyToken, (req, res) => {
   });
 });
 
-// ---------- ✅ NEWS PROXY ROUTE (City-based fix for CORS issue) ----------
+// ---------- News Proxy ----------
 app.get("/api/news", async (req, res) => {
   try {
     const { city = "India" } = req.query;
